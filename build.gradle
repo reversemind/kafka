@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import org.ajoberstar.grgit.Grgit
+//import org.ajoberstar.grgit.Grgit
 
 buildscript {
   repositories {
@@ -26,7 +26,7 @@ buildscript {
     // For Apache Rat plugin to ignore non-Git files
     classpath "org.ajoberstar:grgit:1.7.0"
     classpath 'com.github.ben-manes:gradle-versions-plugin:0.13.0'
-    classpath 'org.scoverage:gradle-scoverage:2.1.0'
+//    classpath 'org.scoverage:gradle-scoverage:2.1.0'
   }
 }
 
@@ -71,6 +71,14 @@ ext {
   gradleVersion = "3.2"
   buildVersionFileName = "kafka-version.properties"
 
+  kafkaSubPath = ""
+  gradleDependenciesPath = "$rootDir"
+
+  if (project.hasProperty("rootKafkaSubPath") && project.properties.get("rootKafkaSubPath").toString().trim() != "") {
+    kafkaSubPath = project.properties.get("rootKafkaSubPath")
+    gradleDependenciesPath = "$rootDir/kafka"
+  }
+
   maxPermSizeArgs = []
   if (!JavaVersion.current().isJava8Compatible())
     maxPermSizeArgs = ['-XX:MaxPermSize=512m']
@@ -91,27 +99,27 @@ ext {
   generatedDocsDir = new File("${project.rootDir}/docs/generated")
 }
 
-apply from: "$rootDir/gradle/dependencies.gradle"
+apply from: "$ext.gradleDependenciesPath/gradle/dependencies.gradle"
 apply from: file('wrapper.gradle')
 
-if (new File('.git').exists()) {
-  apply from: file('gradle/rat.gradle')
-  rat {
-    // Exclude everything under the directory that git should be ignoring via .gitignore or that isn't checked in. These
-    // restrict us only to files that are checked in or are staged.
-    def repo = Grgit.open(project.file('.'))
-    excludes = new ArrayList<String>(repo.clean(ignore: false, directories: true, dryRun: true))
-    // And some of the files that we have checked in should also be excluded from this check
-    excludes.addAll([
-        '**/.git/**',
-        '**/build/**',
-        'CONTRIBUTING.md',
-        'gradlew',
-        'gradlew.bat',
-        '**/README.md'
-    ])
-  }
-}
+//if (new File('.git').exists()) {
+//  apply from: file('gradle/rat.gradle')
+//  rat {
+//    // Exclude everything under the directory that git should be ignoring via .gitignore or that isn't checked in. These
+//    // restrict us only to files that are checked in or are staged.
+//    def repo = Grgit.open(project.file('.'))
+//    excludes = new ArrayList<String>(repo.clean(ignore: false, directories: true, dryRun: true))
+//    // And some of the files that we have checked in should also be excluded from this check
+//    excludes.addAll([
+//        '**/.git/**',
+//        '**/build/**',
+//        'CONTRIBUTING.md',
+//        'gradlew',
+//        'gradlew.bat',
+//        '**/README.md'
+//    ])
+//  }
+//}
 
 subprojects {
   apply plugin: 'java'
@@ -378,15 +386,15 @@ tasks.create(name: "releaseTarGzAll", dependsOn: ['releaseTarGz_2_10', 'releaseT
 
 tasks.create(name: "uploadArchivesAll", dependsOn: ['uploadCoreArchives_2_10', 'uploadCoreArchives_2_11'] + pkgs.collect { it + ":uploadArchives" }) { }
 
-project(':core') {
+project("$kafkaSubPath:core") {
   println "Building project 'core' with Scala version ${versions.scala}"
 
   apply plugin: 'scala'
-  apply plugin: "org.scoverage"
+//  apply plugin: "org.scoverage"
   archivesBaseName = "kafka_${versions.baseScala}"
 
   dependencies {
-    compile project(':clients')
+    compile project(kafkaSubPath + ':clients')
     compile libs.joptSimple
     compile libs.metrics
     compile libs.scala
@@ -398,7 +406,7 @@ project(':core') {
       compile libs.scalaParserCombinators
     }
 
-    testCompile project(':clients').sourceSets.test.output
+    testCompile project(kafkaSubPath + ':clients').sourceSets.test.output
     testCompile libs.bcpkix
     testCompile libs.easymock
     testCompile(libs.apacheda) {
@@ -415,19 +423,19 @@ project(':core') {
     testCompile libs.junit
     testCompile libs.scalaTest
 
-    scoverage libs.scoveragePlugin
-    scoverage libs.scoverageRuntime
+//    scoverage libs.scoveragePlugin
+//    scoverage libs.scoverageRuntime
   }
 
-  jacocoTestReport.enabled = false
-  scoverage {
-    reportDir = file("${rootProject.buildDir}/scoverage")
-    highlighting = false
-  }
-  checkScoverage {
-    minimumRate = 0.0
-  }
-  checkScoverage.shouldRunAfter('test')
+//  jacocoTestReport.enabled = false
+//  scoverage {
+//    reportDir = file("${rootProject.buildDir}/scoverage")
+//    highlighting = false
+//  }
+//  checkScoverage {
+//    minimumRate = 0.0
+//  }
+//  checkScoverage.shouldRunAfter('test')
 
   configurations {
     // manually excludes some unnecessary dependencies
@@ -524,20 +532,20 @@ project(':core') {
     from(configurations.runtime) { into("libs/") }
     from(configurations.archives.artifacts.files) { into("libs/") }
     from(project.siteDocsTar) { into("site-docs/") }
-    from(project(':tools').jar) { into("libs/") }
-    from(project(':tools').configurations.runtime) { into("libs/") }
-    from(project(':connect:api').jar) { into("libs/") }
-    from(project(':connect:api').configurations.runtime) { into("libs/") }
-    from(project(':connect:runtime').jar) { into("libs/") }
-    from(project(':connect:runtime').configurations.runtime) { into("libs/") }
-    from(project(':connect:json').jar) { into("libs/") }
-    from(project(':connect:json').configurations.runtime) { into("libs/") }
-    from(project(':connect:file').jar) { into("libs/") }
-    from(project(':connect:file').configurations.runtime) { into("libs/") }
-    from(project(':streams').jar) { into("libs/") }
-    from(project(':streams').configurations.runtime) { into("libs/") }
-    from(project(':streams:examples').jar) { into("libs/") }
-    from(project(':streams:examples').configurations.runtime) { into("libs/") }
+    from(project(kafkaSubPath + ':tools').jar) { into("libs/") }
+    from(project(kafkaSubPath + ':tools').configurations.runtime) { into("libs/") }
+    from(project(kafkaSubPath + ':connect:api').jar) { into("libs/") }
+    from(project(kafkaSubPath + ':connect:api').configurations.runtime) { into("libs/") }
+    from(project(kafkaSubPath + ':connect:runtime').jar) { into("libs/") }
+    from(project(kafkaSubPath + ':connect:runtime').configurations.runtime) { into("libs/") }
+    from(project(kafkaSubPath + ':connect:json').jar) { into("libs/") }
+    from(project(kafkaSubPath + ':connect:json').configurations.runtime) { into("libs/") }
+    from(project(kafkaSubPath + ':connect:file').jar) { into("libs/") }
+    from(project(kafkaSubPath + ':connect:file').configurations.runtime) { into("libs/") }
+    from(project(kafkaSubPath + ':streams').jar) { into("libs/") }
+    from(project(kafkaSubPath + ':streams').configurations.runtime) { into("libs/") }
+    from(project(kafkaSubPath + ':streams:examples').jar) { into("libs/") }
+    from(project(kafkaSubPath + ':streams:examples').configurations.runtime) { into("libs/") }
     duplicatesStrategy 'exclude'
   }
 
@@ -566,11 +574,11 @@ project(':core') {
   }
 }
 
-project(':examples') {
+project(kafkaSubPath + ':examples') {
   archivesBaseName = "kafka-examples"
 
   dependencies {
-    compile project(':core')
+    compile project(kafkaSubPath + ':core')
   }
 
   javadoc {
@@ -582,13 +590,18 @@ project(':examples') {
   }
 }
 
-project(':clients') {
+project(kafkaSubPath + ':clients') {
   archivesBaseName = "kafka-clients"
 
   dependencies {
     compile libs.lz4
     compile libs.snappy
     compile libs.slf4jApi
+
+    // link to the top level project out of Kafka directory
+    if (project.hasProperty("rootKafkaSubPath") && project.properties.get("rootKafkaSubPath").toString().trim() != "") {
+      compile project(":company-extra-utils")
+    }
 
     testCompile libs.bcpkix
     testCompile libs.junit
@@ -653,17 +666,17 @@ project(':clients') {
   }
 }
 
-project(':tools') {
+project(kafkaSubPath + ':tools') {
   archivesBaseName = "kafka-tools"
 
   dependencies {
-    compile project(':clients')
-    compile project(':log4j-appender')
+    compile project(kafkaSubPath + ':clients')
+    compile project(kafkaSubPath + ':log4j-appender')
     compile libs.argparse4j
     compile libs.jacksonDatabind
     compile libs.slf4jlog4j
 
-    testCompile project(':clients')
+    testCompile project(kafkaSubPath + ':clients')
     testCompile libs.junit
   }
 
@@ -687,12 +700,12 @@ project(':tools') {
   }
 }
 
-project(':streams') {
+project(kafkaSubPath + ':streams') {
   archivesBaseName = "kafka-streams"
 
   dependencies {
-    compile project(':clients')
-    compile project(':connect:json')  // this dependency should be removed after we unify data API
+    compile project(kafkaSubPath + ':clients')
+    compile project(kafkaSubPath + ':connect:json')  // this dependency should be removed after we unify data API
     compile libs.slf4jApi
     compile libs.rocksDBJni
 
@@ -711,9 +724,9 @@ project(':streams') {
 
     compile libs.jacksonDatabind
 
-    testCompile project(':clients').sourceSets.test.output
-    testCompile project(':core')
-    testCompile project(':core').sourceSets.test.output
+    testCompile project(kafkaSubPath + ':clients').sourceSets.test.output
+    testCompile project(kafkaSubPath + ':core')
+    testCompile project(kafkaSubPath + ':core').sourceSets.test.output
     testCompile libs.junit
 
     testRuntime libs.slf4jlog4j
@@ -751,12 +764,12 @@ project(':streams') {
   }
 }
 
-project(':streams:examples') {
+project(kafkaSubPath + ':streams:examples') {
   archivesBaseName = "kafka-streams-examples"
 
   dependencies {
-    compile project(':streams')
-    compile project(':connect:json')  // this dependency should be removed after we unify data API
+    compile project(kafkaSubPath + ':streams')
+    compile project(kafkaSubPath + ':connect:json')  // this dependency should be removed after we unify data API
     compile libs.slf4jlog4j           // this dependency should be removed after KIP-4
   }
 
@@ -777,14 +790,14 @@ project(':streams:examples') {
   }
 }
 
-project(':log4j-appender') {
+project(kafkaSubPath + ':log4j-appender') {
   archivesBaseName = "kafka-log4j-appender"
 
   dependencies {
-    compile project(':clients')
+    compile project(kafkaSubPath + ':clients')
     compile libs.slf4jlog4j
 
-    testCompile project(':clients').sourceSets.test.output
+    testCompile project(kafkaSubPath + ':clients').sourceSets.test.output
     testCompile libs.junit
   }
 
@@ -794,11 +807,11 @@ project(':log4j-appender') {
 
 }
 
-project(':connect:api') {
+project(kafkaSubPath + ':connect:api') {
   archivesBaseName = "connect-api"
 
   dependencies {
-    compile project(':clients')
+    compile project(kafkaSubPath + ':clients')
     compile libs.slf4jApi
 
     testCompile libs.junit
@@ -828,11 +841,11 @@ project(':connect:api') {
   }
 }
 
-project(':connect:json') {
+project(kafkaSubPath + ':connect:json') {
   archivesBaseName = "connect-json"
 
   dependencies {
-    compile project(':connect:api')
+    compile project(kafkaSubPath + ':connect:api')
     compile libs.jacksonDatabind
     compile libs.slf4jApi
 
@@ -865,13 +878,13 @@ project(':connect:json') {
   }
 }
 
-project(':connect:runtime') {
+project(kafkaSubPath + ':connect:runtime') {
   archivesBaseName = "connect-runtime"
 
   dependencies {
-    compile project(':connect:api')
-    compile project(':clients')
-    compile project(':tools')
+    compile project(kafkaSubPath + ':connect:api')
+    compile project(kafkaSubPath + ':clients')
+    compile project(kafkaSubPath + ':tools')
     compile libs.slf4jApi
 
     compile libs.jacksonJaxrsJsonProvider
@@ -884,12 +897,12 @@ project(':connect:runtime') {
       exclude group: 'com.google.code.findbugs', module: 'annotations'
     }
 
-    testCompile project(':clients').sourceSets.test.output
+    testCompile project(kafkaSubPath + ':clients').sourceSets.test.output
     testCompile libs.easymock
     testCompile libs.junit
     testCompile libs.powermock
     testCompile libs.powermockEasymock
-    testCompile project(":connect:json")
+    testCompile project("$kafkaSubPath:connect:json")
 
     testRuntime libs.slf4jlog4j
   }
@@ -922,11 +935,11 @@ project(':connect:runtime') {
   }
 }
 
-project(':connect:file') {
+project(kafkaSubPath + ':connect:file') {
   archivesBaseName = "connect-file"
 
   dependencies {
-    compile project(':connect:api')
+    compile project(kafkaSubPath + ':connect:api')
     compile libs.slf4jApi
 
     testCompile libs.easymock
